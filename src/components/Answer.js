@@ -4,12 +4,14 @@ export default function Answer(props){
 
 
    return <div 
-      className={`answer
-       ${props.showAnswers?"correct":""} 
-       ${props.selected && !props.showAnswers?"selected":""}
-       ${props.showIncorrect && props.selected?"incorrect":""}`
-      }
-      onClick={()=>props.select(props.id)}
+   className={`answer
+   ${props.isSelected?props.showAnswers && !props.isCorrect?'incorrect':'selected':""}
+   ${props.isCorrect && props.showAnswers?"correct":""}
+   
+   
+   `}
+
+   onClick = {()=>{props.select(props.id)}}
    
    >{props.text}</div>
  

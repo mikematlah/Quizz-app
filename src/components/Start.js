@@ -7,7 +7,7 @@ export default function Start(props){
        <div className="start">
            
                 <h1>Quizzical</h1>
-                <p>Some description if needed</p>
+                <p>Try to pass the quizz</p>
                 <button
                     onClick={props.isStarted}
 

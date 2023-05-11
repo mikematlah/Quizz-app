@@ -2,7 +2,8 @@ import React from "react"
 import Question from './components/Question'
 import Start from './components/Start'
 import {nanoid} from "nanoid"
-import Answer from './components/Answer'
+import {decode} from 'html-entities';
+
 
 
 
@@ -10,144 +11,148 @@ import Answer from './components/Answer'
 function App() {
 
 const [questions,setQuestions]=React.useState([])
-const [incorrect,setIncorrect]=React.useState([])
-const [correct,setCorrect]=React.useState([])
-const [count,setCount]=React.useState(0)
-const [showIncorrect,setShowIncorrect]=React.useState(false)
-const [isStarted,setIsStarted]=React.useState(false)
-const [random,setRandom]=React.useState(0)
+const [isStarted,setIsStarted] = React.useState(false)
+const [count,setCount] = React.useState(0)
+const [showAnswers,setShowAnswers] = React.useState(false)
 
-
-function showAnswers(){
- 
-  setShowIncorrect(true)
-  showScore()
-  setQuestions(oldData=>{
-    return oldData.map(el=>{
-      return {...el,showAnswers:!el.showAnswers}
-    })
-  })
+function insertAt(array, index, ...elementsArray) {
+  array.splice(index, 0, ...elementsArray);
 }
-function start(){
-  setIsStarted(oldValue=>!oldValue)
-  setShowIncorrect(false)
-  setCount(0)
+function getrandomNum(arr){
+  const randomNum = Math.floor((Math.random() * arr.length) + 1);
+  return randomNum
 }
 function select(id){
-  setIncorrect(oldData=>{
-    return oldData.map(el=>{
-      return el.map(el=>{
-        return {
-          ...el,
-          selected:id===el.id?!el.selected:el.selected
-        }
-      })
-    
-      
-    })
+    const selectedQuestions = questions.map((question)=>{
+    return{...question,answers:question.answers.map((answer)=>{
+      return {...answer,isSelected:answer.id === id?!answer.isSelected:answer.isSelected}
+    })}
   })
-  setCorrect(oldData=>{
-    return oldData.map(el=>{
-      return {
-        ...el,
-        selected:id===el.id?!el.selected:el.selected
-      }
-    })
-  })
+  setQuestions(prevValue=>prevValue = selectedQuestions)
+ 
 }
- function showScore(){
-    let score=[]
-    for (let i = 0; i < correct.length; i++){
-      if(correct[i].selected===true){
-        score.push(correct[i].selected)
-      }
+function calculateScore(){
+  for(let question of questions){
+    
+      for(let answer of question.answers){
+        if(answer.isCorrect && answer.isSelected){
+          setCount(prevValue=>prevValue +1)
+        }
     }
-    setCount(score.length)
-   
- }
+         
+  }
+}
 
+
+function start(){
+
+  setIsStarted(prevValue=>!prevValue)
+  setShowAnswers(false)
+  setCount(0)
+}
+function getAnswers(){
+  setShowAnswers(prevValue=>!prevValue)
+  calculateScore()
+}
 
   React.useEffect(()=>{
-    fetch(`https://opentdb.com/api.php?amount=5&category=27&difficulty=easy&type=multiple`)
+ fetch(`https://opentdb.com/api.php?amount=5`)
     .then(res=>res.json())
     .then(data=>{
-      console.log(data)
-      setIncorrect(data.results.map(el=>{
-        return el.incorrect_answers.map(el=>{
-          return {
-            text:el,
-            id:nanoid(),
-            selected:false
-          }
+   
+      
+      const questonsData = data.results
+    
+      const incorrectAnswers = questonsData.map(el=>el.incorrect_answers)
+      const correctAnswers = questonsData.map(el=>el.correct_answer)
+      
+      const incorrectAnswObj = incorrectAnswers.map((el)=>{
+          return el.map((answer)=>{
+              return {
+                text:answer,
+                isCorrect:false,
+                id:nanoid(),
+                isSelected:false}
+          })
+      })
+      
+      let allAnswers = []
+      for(let i = 0;i < incorrectAnswObj.length;i++){
+            insertAt(incorrectAnswObj[i],getrandomNum(incorrectAnswObj[i]),{
+              text:correctAnswers[i],
+              isCorrect:true,
+              id:nanoid(),
+              isSelected:false})
+           
+            allAnswers.push(incorrectAnswObj[i])
+
+      }
+      
+  
+      let newData = []
+      for(let i = 0;i < questonsData.length;i++){
+        newData.push({
+            question:decode(questonsData[i].question),
+            answers:allAnswers[i]
         })
-      }))
-      setCorrect(data.results.map(el=>{
-        return {
-          text:el.correct_answer,
-          id:nanoid(),
-          selected:false
-        }
-      }))
+
+    }
+
         
-        setQuestions(data.results.map(el=>{
-          return {
-            id:nanoid(),
-            question:el.question,
-            showAnswers:false
-            
-          
-          }
-        }))
+    setQuestions(newData.map((el)=>{
+      return {
+        id:nanoid(),
+        question:el.question,
+        answers:el.answers
+      }
+    }))
    
     
 
     })
-    const random=Math.floor(Math.random()*3) + 1
-    setRandom(random)
-
 
   },[isStarted])  
 
-  const elements=[]
-  for(let i = 0; i < questions.length; i++){
-    const questionData=questions[i]
-    const incorrectData=incorrect[i]
-    const correctData=correct[i]
-   
  
-    
-      elements.push(
+
+
+  const elements= questions.map((el)=>{
+    return (
       <Question
-          key={questionData.id}
-          text={questionData.question}
-          incorrectAnswers={incorrectData}
-          correctAnswer={correctData}
-          select={select}
-          showAnswers={questionData.showAnswers}
-          showIncorrect={showIncorrect}
-          random={random}
-         
-      
-      />)
-  }
+          key={el.id}
+          question = {el.question}
+          answers = {el.answers}
+          select = {select}
+          showAnswers = {showAnswers}
+
+
+      />
+    )
+  })
+
+  
+ 
+
  
   return(
     isStarted?
     <div className="">
-     {elements}
-     <div className="result">
-        {showIncorrect && <p>Your score {count} / 5</p>}
+      {elements}
+      <div className="result">
+        {showAnswers && <p>Your score {count} / 5</p>}
         <button 
         
         className="btn"
-        onClick={!showIncorrect?showAnswers:start}
-        >{!showIncorrect?'Check answer':'Play again'}</button>
+        onClick={!showAnswers?getAnswers: start}
+        >{!showAnswers?'Check answer':'Play again'}</button>
      </div>
+    
      
-  </div>:
-  <Start
-    isStarted={start}
-  />
+    </div>:
+      <Start
+      isStarted = {start}
+    />
+ 
   
   )
  
@@ -155,3 +160,5 @@ function select(id){
 }
 
 export default App;
+
+/*API: https://opentdb.com/api_config.php*/
